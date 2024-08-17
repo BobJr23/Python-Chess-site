@@ -1,10 +1,25 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
+    <meta charset="UTF-8">
+    <title>Game Information</title>
 </head>
 <body>
-$END$
+<h1>Game Information</h1>
+<p>Game code: {{ game_code }}</p>
+<p>Game share link: <a href="{{ game_share_code }}" id="game-share-link">{{ game_share_code }}</a></p>
+<button id="copy-link-button">Copy Link</button>
+
+<script>
+{#    copy link script by AI #}
+    document.getElementById('copy-link-button').addEventListener('click', function() {
+        const link = document.getElementById('game-share-link').href;
+        navigator.clipboard.writeText(link).then(function() {
+            alert('Link copied to clipboard!');
+        }, function(err) {
+            console.error('Could not copy text: ', err);
+        });
+    });
+</script>
 </body>
 </html>
