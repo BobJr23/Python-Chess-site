@@ -12,28 +12,34 @@ app = Flask(__name__)
 app.config["DEBUG"] = True
 
 
+def get_games():
+    with open("games.json", "r") as f:
+        return json.load(f)
+
+
 @app.route("/")
 def hello_world():
-
-    username = request.cookies.get("username")
-    print(username)
+    users = get_games()
+    try:
+        username = users["usernames"][request.cookies.get("username")]
+    except KeyError:
+        username = None
     return render_template("home.html", username=username)
 
 
-# Todo: save uuid to cookie and check if user is logged in via games.json instead - cuz it's safer
 @app.route("/signup", methods=["POST"])
 def login():
     username = request.form.get("username")
-    with open("games.json", "r") as f:
-        users = json.load(f)
-    if username in users["usernames"]:
+    users = get_games()
+    if username in users["usernames"].values():
         return "User already exists"
     else:
-        users["usernames"].append(username)
+        user_code = str(uuid.uuid4())
+        users["usernames"][user_code] = username
         with open("games.json", "w") as f:
             json.dump(users, f)
         resp = make_response("Sign up successful")
-        resp.set_cookie("username", username)
+        resp.set_cookie("username", user_code)
         return resp
 
 
@@ -48,12 +54,17 @@ def logout():
 def new_game():
     game_type = request.form.get("game_type")
     code = str(uuid.uuid4())
-
-    with open("games.json", "r") as f:
-        games = json.load(f)
+    username = request.cookies.get("username")
+    if username is None:
+        return "You need to be logged in to create a game", 401
+    games = get_games()
     games["games"][code] = {
         "status": "waiting",
-        "player1": request.cookies.get("username"),
+        "player1_id": username,
+        "player1_name": games["usernames"][username],
+        "player2_id": None,
+        "player2_name": None,
+        "game_url": request.url_root + "game/" + code,
         "game_type": game_type,
         "id": code,
         "player_turn": "white",
@@ -70,18 +81,17 @@ def new_game():
     return render_template(
         "new_game.html",
         game_code=code,
-        game_share_code=request.url_root + "game/" + code,
+        game_share_code=request.url_root + "game/" + code + "/join",
     )
 
 
 @app.route("/game/<game_code>/message", methods=["POST"])
 def send_message(game_code):
     message = request.form.get("message")
-    with open("games.json", "r") as f:
-        games = json.load(f)
+    games = get_games()
     games["games"][game_code]["messages"].append(
         {
-            "player": request.cookies.get("username"),
+            "player": get_games()["usernames"][request.cookies.get("username")],
             "message": message,
             "timestamp": time.time(),
         }
@@ -91,25 +101,33 @@ def send_message(game_code):
     return games["games"][game_code]["messages"]
 
 
-@app.route("/game/<game_code>/join", methods=["POST"])
+@app.route("/game/<game_code>/join", methods=["GET"])
 def join_game(game_code):
-    with open("games.json", "r") as f:
-        games = json.load(f)
-    if game_code not in games["games"]:
+    games = get_games()
+    if game_code not in games["games"].keys():
         return "Game not found", 404
-    if games["games"][game_code]["player2"]:
+    if games["games"][game_code]["player2_id"]:
         return "Game is full", 400
 
-    games["games"][game_code]["player2"] = request.cookies.get("username")
+    try:
+        player2_name = games["usernames"][request.cookies.get("username")]
+    except KeyError:
+        return "You need to be logged in to join a game", 401
+    if player2_name == games["games"][game_code]["player1_name"]:
+        return "You can't join your own game lol", 400
+
+    games["games"][game_code]["player2_id"] = request.cookies.get("username")
+    games["games"][game_code]["player2_name"] = player2_name
     with open("games.json", "w") as f:
         json.dump(games, f)
-    return "You joined the game"
+    board = chess.Board(fen=games["games"][game_code]["fen"])
+    board_svg = chess.svg.board(board=board, size=800, orientation=chess.BLACK)
+    return render_template("game.html", game_code=game_code)
 
 
 @app.route("/game/<game_code>", methods=["GET"])
 def get_board(game_code):
-    with open("games.json", "r") as f:
-        games = json.load(f)
+    games = get_games()
     if game_code not in games["games"]:
         return "Game not found", 404
     game = games["games"][game_code]
@@ -118,6 +136,15 @@ def get_board(game_code):
     return render_template(
         "game.html", board_svg=Markup(board_svg), game_code=game_code
     )
+
+
+@app.route("/find-open", methods=["GET"])
+def find_open():
+    games = get_games()
+    open_games = [
+        game for game in games["games"].values() if game["status"] == "waiting"
+    ]
+    return render_template("open_games.html", open_games=open_games)
 
 
 if __name__ == "__main__":

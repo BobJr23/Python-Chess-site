@@ -1,0 +1,18 @@
+<!-- templates/open_games.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Find a Public Game</title>
+</head>
+<body>
+<h1>Open Games</h1>
+<ul>
+    {% for game in open_games %}
+        <li>
+            <a href="{{ game.game_url }}/join">Join game</a>, Player 1: {{ game.player1_name }}
+        </li>
+    {% endfor %}
+</ul>
+</body>
+</html>
