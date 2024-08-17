@@ -34,18 +34,49 @@
 <h1>Chess Game</h1>
 <div class="container">
     <div class="game-area">
-        <p>Game area</p>
+        {{ board_svg }}
     </div>
     <div class="chat-section">
         <div class="chat-messages" id="chat-messages">
         </div>
         <div class="chat-input">
-            <form action="/game/{{ game_code }}/message" method="post">
-                <input type="text" name="message" placeholder="Type a message...">
+            <form id="chat-form">
+                <input type="text" name="message" id="chat-input" placeholder="Type a message...">
                 <button type="submit">Send</button>
             </form>
         </div>
     </div>
 </div>
+<script>
+    document.getElementById('chat-form').addEventListener('submit', function(event) {
+        event.preventDefault();
+
+        const input = document.getElementById('chat-input');
+        const message = input.value;
+        const gameCode = "{{ game_code }}";
+
+        fetch(`/game/${gameCode}/message`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+                'message': message
+            })
+        })
+            .then(response => response.json())
+            .then(data => {
+                const messages = document.getElementById('chat-messages');
+                messages.innerHTML = '';
+                data.forEach(msg => {
+                    const messageDiv = document.createElement('div');
+                    messageDiv.textContent = `${msg.player}: ${msg.message}`;
+                    messages.appendChild(messageDiv);
+                });
+                input.value = '';
+            })
+            .catch(error => console.error('Error:', error));
+    });
+</script>
 </body>
 </html>

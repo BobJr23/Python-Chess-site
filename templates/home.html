@@ -6,6 +6,19 @@
 </head>
 <body>
 <h1>Welcome to BobJr's Chess site</h1>
+{% if username %}
+    <p>Welcome, {{ username }}!</p>
+    <a href="/logout">Logout</a>
+{% else %}
+<form action="/signup" method="post">
+    <label>
+        Username:
+        <input type="text" name="username">
+    </label>
+
+    <button type="submit">Save Username</button>
+</form>
+{% endif %}
 <form action="/new_game" method="post">
     <label>
         <input type="radio" name="game_type" value="public" checked> Public
