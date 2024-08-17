@@ -1,0 +1,51 @@
+<!-- templates/game.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Chess Game</title>
+    <style>
+        .container {
+            display: flex;
+        }
+        .game-area {
+            flex: 3;
+            border: 1px solid #000;
+            padding: 10px;
+        }
+        .chat-section {
+            flex: 1;
+            border: 1px solid #000;
+            padding: 10px;
+            margin-left: 10px;
+        }
+        .chat-messages {
+            height: 300px;
+            overflow-y: scroll;
+            border: 1px solid #ccc;
+            padding: 5px;
+        }
+        .chat-input {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+<h1>Chess Game</h1>
+<div class="container">
+    <div class="game-area">
+        <p>Game area</p>
+    </div>
+    <div class="chat-section">
+        <div class="chat-messages" id="chat-messages">
+        </div>
+        <div class="chat-input">
+            <form action="/game/{{ game_code }}/message" method="post">
+                <input type="text" name="message" placeholder="Type a message...">
+                <button type="submit">Send</button>
+            </form>
+        </div>
+    </div>
+</div>
+</body>
+</html>
