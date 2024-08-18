@@ -9,16 +9,17 @@
 {% if username %}
     <p>Welcome, {{ username }}!</p>
     <a href="/logout">Logout</a>
-{% else %}
-<form action="/signup" method="post">
-    <label>
-        Username:
-        <input type="text" name="username">
-    </label>
+    <br><br>
+    <a href="/find-open">Find some Open Games to Join!</a>
+    <br><br>
+    <form action="/join" method="post">
+        <label>
+            Or enter a game code to join:
+            <input type="text" name="game_code">
+        </label>
 
-    <button type="submit">Save Username</button>
-</form>
-{% endif %}
+        <button type="submit">Join Game</button>
+    </form>
 <form action="/new_game" method="post">
     <label>
         <input type="radio" name="game_type" value="public" checked> Public
@@ -28,5 +29,16 @@
     </label>
     <button type="submit">New Game</button>
 </form>
+{% else %}
+<form action="/signup" method="post">
+    <label>
+        Enter a username to begin playing:
+        <input type="text" name="username">
+    </label>
+
+    <button type="submit">Save Username</button>
+</form>
+    <p>If you signed up already but still have this query, try refreshing. If you still see this that means your username has been taken</p>
+{% endif %}
 </body>
 </html>

@@ -1,5 +1,11 @@
-# app.py
-from flask import Flask, render_template, request, make_response, render_template_string
+from flask import (
+    Flask,
+    render_template,
+    request,
+    make_response,
+    render_template_string,
+    redirect,
+)
 import uuid
 import chess
 import json
@@ -17,6 +23,13 @@ def get_games():
         return json.load(f)
 
 
+def get_board_from_code(game_code):
+    games = get_games()
+    game = games["games"][game_code]
+    board = chess.Board(fen=game["fen"])
+    return board
+
+
 @app.route("/")
 def hello_world():
     users = get_games()
@@ -24,6 +37,7 @@ def hello_world():
         username = users["usernames"][request.cookies.get("username")]
     except KeyError:
         username = None
+
     return render_template("home.html", username=username)
 
 
@@ -32,20 +46,20 @@ def login():
     username = request.form.get("username")
     users = get_games()
     if username in users["usernames"].values():
-        return "User already exists"
+        return redirect("/")
     else:
         user_code = str(uuid.uuid4())
         users["usernames"][user_code] = username
         with open("games.json", "w") as f:
             json.dump(users, f)
-        resp = make_response("Sign up successful")
+        resp = redirect("/")
         resp.set_cookie("username", user_code)
         return resp
 
 
 @app.route("/logout", methods=["POST", "GET"])
 def logout():
-    resp = make_response("You logged out")
+    resp = redirect("/")
     resp.set_cookie("username", "", expires=0)
     return resp
 
@@ -101,9 +115,12 @@ def send_message(game_code):
     return games["games"][game_code]["messages"]
 
 
+@app.route("/join")
 @app.route("/game/<game_code>/join", methods=["GET"])
-def join_game(game_code):
+def join_game(game_code=None):
     games = get_games()
+    if not game_code:
+        game_code = request.args.get("game_code")
     if game_code not in games["games"].keys():
         return "Game not found", 404
     if games["games"][game_code]["player2_id"]:
@@ -114,15 +131,29 @@ def join_game(game_code):
     except KeyError:
         return "You need to be logged in to join a game", 401
     if player2_name == games["games"][game_code]["player1_name"]:
-        return "You can't join your own game lol", 400
+        return render_template(
+            "game.html",
+            game_code=game_code,
+            error="You can't play against yourself",
+            board_svg=Markup(
+                chess.svg.board(board=get_board_from_code(game_code), size=800)
+            ),
+        )
 
     games["games"][game_code]["player2_id"] = request.cookies.get("username")
     games["games"][game_code]["player2_name"] = player2_name
     with open("games.json", "w") as f:
         json.dump(games, f)
-    board = chess.Board(fen=games["games"][game_code]["fen"])
-    board_svg = chess.svg.board(board=board, size=800, orientation=chess.BLACK)
-    return render_template("game.html", game_code=game_code)
+
+    return redirect("/game/" + game_code)
+    # redirect seems to be better than returning the template cuz of url issues when reloading
+    # return render_template(
+    #     "game.html",
+    #     game_code=game_code,
+    #     board_svg=Markup(
+    #         chess.svg.board(board=get_board_from_code(game_code), size=800)
+    #     ),
+    # )
 
 
 @app.route("/game/<game_code>", methods=["GET"])
@@ -131,8 +162,8 @@ def get_board(game_code):
     if game_code not in games["games"]:
         return "Game not found", 404
     game = games["games"][game_code]
-    board = chess.Board(fen=game["fen"])
-    board_svg = chess.svg.board(board=board, size=800)
+
+    board_svg = chess.svg.board(board=get_board_from_code(game_code), size=800)
     return render_template(
         "game.html", board_svg=Markup(board_svg), game_code=game_code
     )

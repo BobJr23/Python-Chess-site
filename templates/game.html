@@ -32,6 +32,12 @@
 </head>
 <body>
 <h1>Chess Game</h1>
+{% if error %}
+<script>
+    window.location.href = '/game/{{ game_code }}';
+    alert("{{ error }}");
+</script>
+{% endif %}
 <div class="container">
     <div class="game-area">
         {{ board_svg }}
@@ -48,6 +54,25 @@
     </div>
 </div>
 <script>
+    function reloadMessages() {
+        const gameCode = "{{ game_code }}";
+        fetch(`/game/${gameCode}/messages`)
+            .then(response => response.json())
+            .then(data => {
+                const messages = document.getElementById('chat-messages');
+                messages.innerHTML = '';
+                data.forEach(msg => {
+                    const messageDiv = document.createElement('div');
+                    messageDiv.textContent = `${msg.player}: ${msg.message}`;
+                    messages.appendChild(messageDiv);
+                });
+            })
+            .catch(error => console.error('Error:', error));
+    }
+
+    // Reload messages every 5 seconds
+    setInterval(reloadMessages, 5000);
+
     document.getElementById('chat-form').addEventListener('submit', function(event) {
         event.preventDefault();
 
@@ -66,17 +91,14 @@
         })
             .then(response => response.json())
             .then(data => {
-                const messages = document.getElementById('chat-messages');
-                messages.innerHTML = '';
-                data.forEach(msg => {
-                    const messageDiv = document.createElement('div');
-                    messageDiv.textContent = `${msg.player}: ${msg.message}`;
-                    messages.appendChild(messageDiv);
-                });
+                reloadMessages();
                 input.value = '';
             })
             .catch(error => console.error('Error:', error));
     });
+
+    // Initial load of messages
+    reloadMessages();
 </script>
 </body>
 </html>
