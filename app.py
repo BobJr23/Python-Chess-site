@@ -115,6 +115,45 @@ def send_message(game_code):
     return games["games"][game_code]["messages"]
 
 
+@app.route("/game/<game_code>/get_messages", methods=["GET"])
+def get_messages(game_code):
+    games = get_games()
+    return games["games"][game_code]["messages"]
+
+
+@app.route("/game/<game_code>/move", methods=["POST"])
+def move(game_code):
+    games = get_games()
+    game = games["games"][game_code]
+    board = get_board_from_code(game_code)
+    move = request.form.get("move")
+    try:
+        board.push_san(move)
+    except ValueError:
+        return "Invalid move", 400
+    game["fen"] = board.fen()
+    game["player_turn"] = "black" if game["player_turn"] == "white" else "white"
+    with open("games.json", "w") as f:
+        json.dump(games, f)
+    return redirect("/game/" + game_code)
+
+
+@app.route("/game/<game_code>/click", methods=["POST"])
+def click(game_code):
+    square = request.args.get("square")
+    if not square:
+        return "No square provided", "400"
+
+    board = get_board_from_code(game_code)
+    legal_moves = [move for move in board.legal_moves if move.uci().startswith(square)]
+
+    highlighted_squares = [chess.SQUARE_NAMES[move.to_square] for move in legal_moves]
+    print(highlighted_squares)
+    board_svg = chess.svg.board(board, size=800, squares=highlighted_squares)
+
+    return board_svg, "200"
+
+
 @app.route("/join")
 @app.route("/game/<game_code>/join", methods=["GET"])
 def join_game(game_code=None):
@@ -125,6 +164,8 @@ def join_game(game_code=None):
         return "Game not found", 404
     if games["games"][game_code]["player2_id"]:
         return "Game is full", 400
+    if games["games"][game_code]["player2_id"] == request.cookies.get("username"):
+        return redirect("/game/" + game_code)
 
     try:
         player2_name = games["usernames"][request.cookies.get("username")]
@@ -142,6 +183,7 @@ def join_game(game_code=None):
 
     games["games"][game_code]["player2_id"] = request.cookies.get("username")
     games["games"][game_code]["player2_name"] = player2_name
+    games["games"][game_code]["status"] = "playing"
     with open("games.json", "w") as f:
         json.dump(games, f)
 

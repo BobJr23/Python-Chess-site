@@ -40,7 +40,9 @@
 {% endif %}
 <div class="container">
     <div class="game-area">
-        {{ board_svg }}
+        <div id="chess-board">
+            {{ board_svg }}
+        </div>
     </div>
     <div class="chat-section">
         <div class="chat-messages" id="chat-messages">
@@ -56,7 +58,7 @@
 <script>
     function reloadMessages() {
         const gameCode = "{{ game_code }}";
-        fetch(`/game/${gameCode}/messages`)
+        fetch(`/game/${gameCode}/get_messages`)
             .then(response => response.json())
             .then(data => {
                 const messages = document.getElementById('chat-messages');
@@ -70,8 +72,8 @@
             .catch(error => console.error('Error:', error));
     }
 
-    // Reload messages every 5 seconds
-    setInterval(reloadMessages, 5000);
+    // Reload messages every 10 seconds, didn't want to spam server, but you could modify if you want
+    setInterval(reloadMessages, 10000);
 
     document.getElementById('chat-form').addEventListener('submit', function(event) {
         event.preventDefault();
@@ -99,6 +101,25 @@
 
     // Initial load of messages
     reloadMessages();
+
+    // Drag not implemented yet
+    document.getElementById('chess-board').addEventListener('click', function(event) {
+        const svg = event.target.closest('svg');
+        if (!svg) return;
+
+        const rect = svg.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+
+        const squareSize = rect.width / 8;
+        // offset for board "files" (a-h)
+        const file = String.fromCharCode(97 + Math.floor(x / squareSize));
+        const rank = 8 - Math.floor(y / squareSize);
+        // gets the square name by concat-ing the two elements (e.g. 'a1', 'e5', 'h8')
+        const square = file + rank;
+        console.log('Clicked square:', square);
+
+    });
 </script>
 </body>
 </html>
