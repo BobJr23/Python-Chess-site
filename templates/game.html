@@ -41,11 +41,14 @@
 <div class="container">
     <div class="game-area">
         Selected piece: <span id="selected-piece"></span>
+        Your color: <span id="player-color">{{ color }}</span>
         <div id="chess-board">
             {{ board_svg }}
         </div>
     </div>
     <div class="chat-section">
+    {% if color != None %}
+
         <div class="chat-messages" id="chat-messages">
         </div>
         <div class="chat-input">
@@ -54,9 +57,40 @@
                 <button type="submit">Send</button>
             </form>
         </div>
+
+        {% else %}
+        <div>
+            <p>Chat disabled for other matches</p>
+        </div>
+    {% endif %}
     </div>
-    </div>
+</div>
 <script>
+    function updateBoard(square) {
+        fetch('/game/{{ game_code }}/click', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+                'square': square,
+                "selected": document.getElementById('selected-piece').textContent
+            })
+        })
+            .then(response => response.json())
+            .then(data => {
+                console.log(data);
+                if (data.status === 400) {
+                    alert(data.body);
+                } else {
+                    //update board
+                    document.getElementById('chess-board').innerHTML = data.board;
+                    // update select piece text
+                    document.getElementById('selected-piece').textContent = square;
+                }
+            })
+            .catch(error => console.error('Error:', error));
+    }
     function reloadMessages() {
         const gameCode = "{{ game_code }}";
         fetch(`/game/${gameCode}/get_messages`)
@@ -75,6 +109,8 @@
 
     // Reload messages every 10 seconds, didn't want to spam server, but you could modify if you want
     setInterval(reloadMessages, 10000);
+    // Reload board every 5 seconds, again, changeable
+    setInterval(updateBoard, 5000, "None");
 
     document.getElementById('chat-form').addEventListener('submit', function(event) {
         event.preventDefault();
@@ -102,46 +138,31 @@
 
     // Initial load of messages
     reloadMessages();
-
+    updateBoard("None");
     // Drag not implemented yet
+
     document.getElementById('chess-board').addEventListener('click', function(event) {
         const svg = event.target.closest('svg');
         if (!svg) return;
 
         const rect = svg.getBoundingClientRect();
-        const x = event.clientX - rect.left;
-        const y = event.clientY - rect.top;
+        let x = event.clientX - rect.left;
+        let y = event.clientY - rect.top;
 
         const squareSize = rect.width / 8;
         // offset for board "files" (a-h)
+        color = document.getElementById('player-color').textContent;
+        console.log(color);
+        if (color === 'black') {
+            x = rect.width - x;
+            y = rect.height - y;
+        }
         const file = String.fromCharCode(97 + Math.floor(x / squareSize));
         const rank = 8 - Math.floor(y / squareSize);
         // gets the square name by concat-ing the two elements (e.g. 'a1', 'e5', 'h8')
         const square = file + rank;
         console.log('Clicked square:', square);
-        fetch('/game/{{ game_code }}/click', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: new URLSearchParams({
-                'square': square,
-                "selected": document.getElementById('selected-piece').textContent
-            })
-        })
-            .then(response => response.json())
-            .then(data => {
-                console.log(data);
-                if (data.status === 400) {
-                    alert(data.body);
-                } else {
-                    //update board
-                    document.getElementById('chess-board').innerHTML = data.board;
-                    // update select piece text
-                    document.getElementById('selected-piece').textContent = square;
-                }
-            })
-            .catch(error => console.error('Error:', error));
+        updateBoard(square);
 
     });
 </script>

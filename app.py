@@ -2,8 +2,6 @@ from flask import (
     Flask,
     render_template,
     request,
-    make_response,
-    render_template_string,
     redirect,
 )
 import uuid
@@ -28,6 +26,19 @@ def get_board_from_code(game_code):
     game = games["games"][game_code]
     board = chess.Board(fen=game["fen"])
     return board
+
+
+def verify_player(game_code, username):
+    games = get_games()
+    game = games["games"][game_code]
+    if username == game["player1_id"]:
+
+        return "white"
+
+    if username == game["player2_id"]:
+        return "black"
+
+    return None
 
 
 @app.route("/")
@@ -83,7 +94,18 @@ def new_game():
         "id": code,
         "player_turn": "white",
         "fen": chess.Board().fen(),
-        "messages": [],
+        "messages": [
+            {
+                "player": "System",
+                "message": "Waiting for player... Invite your friend with the code:\n"
+                + code
+                + "\nor share this link:\n"
+                + request.url_root
+                + "game/"
+                + code
+                + "/join",
+            }
+        ],
     }
     if game_type == "public":
         pass
@@ -134,14 +156,21 @@ def click(game_code):
     selected_legal = [
         move for move in board.legal_moves if move.uci().startswith(selected)
     ]
+    color = verify_player(game_code, request.cookies.get("username"))
     # means player moved while highlighted
-    if selected and selected + square in [move.uci() for move in selected_legal]:
+    if (
+        selected
+        and selected + square in [move.uci() for move in selected_legal]
+        and verify_player(game_code, request.cookies.get("username"))
+        == ("white" if board.turn else "black")
+    ):
         print("move is valid")
         board.push_san(selected + square)
         games = get_games()
         game = games["games"][game_code]
         game["fen"] = board.fen()
         game["player_turn"] = "black" if game["player_turn"] == "white" else "white"
+
         with open("games.json", "w") as f:
             json.dump(games, f)
         return {
@@ -149,12 +178,12 @@ def click(game_code):
                 chess.svg.board(
                     board,
                     size=800,
+                    orientation=(color == "white"),
                 )
             ),
             "status": 200,
         }
-    else:
-        print("move isn't valid", selected, square, legal_moves, selected_legal)
+
     highlighted_squares = [chess.SQUARE_NAMES[move.to_square] for move in legal_moves]
     fill_colors = {
         chess.SQUARE_NAMES.index(sq): "#cc0000cc" for sq in highlighted_squares
@@ -164,6 +193,7 @@ def click(game_code):
             board,
             size=800,
             fill=fill_colors,
+            orientation=(color == "white"),
         )
     )
 
@@ -175,7 +205,7 @@ def click(game_code):
 def join_game(game_code=None):
     games = get_games()
     if not game_code:
-        game_code = request.args.get("game_code")
+        game_code = request.form.get("game_code")
     if game_code not in games["games"].keys():
         return "Game not found", 404
     if games["games"][game_code]["player2_id"]:
@@ -195,11 +225,15 @@ def join_game(game_code=None):
             board_svg=Markup(
                 chess.svg.board(board=get_board_from_code(game_code), size=800)
             ),
+            color="white",
         )
 
     games["games"][game_code]["player2_id"] = request.cookies.get("username")
     games["games"][game_code]["player2_name"] = player2_name
     games["games"][game_code]["status"] = "playing"
+    games["games"][game_code]["messages"].append(
+        {"player": "System", "message": "Game started!"}
+    )
     with open("games.json", "w") as f:
         json.dump(games, f)
 
@@ -220,10 +254,15 @@ def get_board(game_code):
     if game_code not in games["games"]:
         return "Game not found", 404
     game = games["games"][game_code]
-
-    board_svg = chess.svg.board(board=get_board_from_code(game_code), size=800)
+    color = verify_player(game_code, request.cookies.get("username"))
+    board_svg = chess.svg.board(
+        board=get_board_from_code(game_code), size=800, orientation=(color == "white")
+    )
     return render_template(
-        "game.html", board_svg=Markup(board_svg), game_code=game_code
+        "game.html",
+        board_svg=Markup(board_svg),
+        game_code=game_code,
+        color=color,
     )
 
 
