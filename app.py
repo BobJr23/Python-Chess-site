@@ -121,37 +121,53 @@ def get_messages(game_code):
     return games["games"][game_code]["messages"]
 
 
-@app.route("/game/<game_code>/move", methods=["POST"])
-def move(game_code):
-    games = get_games()
-    game = games["games"][game_code]
-    board = get_board_from_code(game_code)
-    move = request.form.get("move")
-    try:
-        board.push_san(move)
-    except ValueError:
-        return "Invalid move", 400
-    game["fen"] = board.fen()
-    game["player_turn"] = "black" if game["player_turn"] == "white" else "white"
-    with open("games.json", "w") as f:
-        json.dump(games, f)
-    return redirect("/game/" + game_code)
-
-
 @app.route("/game/<game_code>/click", methods=["POST"])
 def click(game_code):
-    square = request.args.get("square")
+    form = request.form
+    square = form.get("square")
+    selected = form.get("selected")
     if not square:
-        return "No square provided", "400"
+        return {"board": "Invalid", "status": 400}
 
     board = get_board_from_code(game_code)
     legal_moves = [move for move in board.legal_moves if move.uci().startswith(square)]
-
+    selected_legal = [
+        move for move in board.legal_moves if move.uci().startswith(selected)
+    ]
+    # means player moved while highlighted
+    if selected and selected + square in [move.uci() for move in selected_legal]:
+        print("move is valid")
+        board.push_san(selected + square)
+        games = get_games()
+        game = games["games"][game_code]
+        game["fen"] = board.fen()
+        game["player_turn"] = "black" if game["player_turn"] == "white" else "white"
+        with open("games.json", "w") as f:
+            json.dump(games, f)
+        return {
+            "board": Markup(
+                chess.svg.board(
+                    board,
+                    size=800,
+                )
+            ),
+            "status": 200,
+        }
+    else:
+        print("move isn't valid", selected, square, legal_moves, selected_legal)
     highlighted_squares = [chess.SQUARE_NAMES[move.to_square] for move in legal_moves]
-    print(highlighted_squares)
-    board_svg = chess.svg.board(board, size=800, squares=highlighted_squares)
+    fill_colors = {
+        chess.SQUARE_NAMES.index(sq): "#cc0000cc" for sq in highlighted_squares
+    }
+    board_svg = Markup(
+        chess.svg.board(
+            board,
+            size=800,
+            fill=fill_colors,
+        )
+    )
 
-    return board_svg, "200"
+    return {"board": board_svg, "status": 200}
 
 
 @app.route("/join")

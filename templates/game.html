@@ -40,6 +40,7 @@
 {% endif %}
 <div class="container">
     <div class="game-area">
+        Selected piece: <span id="selected-piece"></span>
         <div id="chess-board">
             {{ board_svg }}
         </div>
@@ -54,7 +55,7 @@
             </form>
         </div>
     </div>
-</div>
+    </div>
 <script>
     function reloadMessages() {
         const gameCode = "{{ game_code }}";
@@ -118,6 +119,29 @@
         // gets the square name by concat-ing the two elements (e.g. 'a1', 'e5', 'h8')
         const square = file + rank;
         console.log('Clicked square:', square);
+        fetch('/game/{{ game_code }}/click', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+                'square': square,
+                "selected": document.getElementById('selected-piece').textContent
+            })
+        })
+            .then(response => response.json())
+            .then(data => {
+                console.log(data);
+                if (data.status === 400) {
+                    alert(data.body);
+                } else {
+                    //update board
+                    document.getElementById('chess-board').innerHTML = data.board;
+                    // update select piece text
+                    document.getElementById('selected-piece').textContent = square;
+                }
+            })
+            .catch(error => console.error('Error:', error));
 
     });
 </script>
