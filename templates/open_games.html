@@ -1,18 +1,45 @@
-<!-- templates/open_games.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Find a Public Game</title>
+    <title>Open Games</title>
+    <style>
+        body.light-mode {
+            background-color: #ffffff;
+            color: #000000;
+        }
+        body.dark-mode {
+            background-color: #000000;
+            color: #ffffff;
+        }
+    </style>
 </head>
-<body>
+<body class="light-mode">
 <h1>Open Games</h1>
 <ul>
     {% for game in open_games %}
         <li>
-            <a href="{{ game.game_url }}/join">Join game</a>, Player 1: {{ game.player1_name }}
+            Game code: {{ game.code }} - <a href="{{ game.join_link }}">Join Game</a>
         </li>
     {% endfor %}
 </ul>
+<button id="toggle-mode">Toggle Dark/Light Mode</button>
+
+<script>
+    // Dark/Light mode toggle
+    const toggleButton = document.getElementById('toggle-mode');
+    toggleButton.addEventListener('click', function() {
+        const body = document.body;
+        body.classList.toggle('dark-mode');
+        body.classList.toggle('light-mode');
+        localStorage.setItem('mode', body.classList.contains('dark-mode') ? 'dark' : 'light');
+    });
+
+    // Load mode from localStorage
+    window.addEventListener('load', function() {
+        const mode = localStorage.getItem('mode') || 'light';
+        document.body.classList.add(mode + '-mode');
+    });
+</script>
 </body>
 </html>

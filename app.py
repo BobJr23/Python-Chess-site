@@ -28,6 +28,18 @@ def get_board_from_code(game_code):
     return board
 
 
+def get_active_players():
+    games = get_games()
+    active_players = set()
+    for game in games["games"].values():
+        if game["status"] == "playing":
+            if game["player1_id"]:
+                active_players.add(game["player1_id"])
+            if game["player2_id"]:
+                active_players.add(game["player2_id"])
+    return len(active_players)
+
+
 def verify_player(game_code, username):
     games = get_games()
     game = games["games"][game_code]
@@ -49,7 +61,7 @@ def hello_world():
     except KeyError:
         username = None
 
-    return render_template("home.html", username=username)
+    return render_template("home.html", username=username, active=get_active_players())
 
 
 @app.route("/signup", methods=["POST"])

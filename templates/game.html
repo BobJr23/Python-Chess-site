@@ -5,6 +5,33 @@
     <meta charset="UTF-8">
     <title>Chess Game</title>
     <style>
+        body.light-mode {
+            background-color: #ffffff;
+            color: #000000;
+        }
+        body.dark-mode {
+            background-color: #000000;
+            color: #ffffff;
+        }
+        body.light-mode .chat-section {
+            background-color: #f9f9f9;
+            color: #000000;
+        }
+
+        body.dark-mode .chat-section {
+            background-color: #333333;
+            color: #ffffff;
+        }
+
+        body.light-mode .chat-messages {
+            background-color: #ffffff;
+            color: #000000;
+        }
+
+        body.dark-mode .chat-messages {
+            background-color: #444444;
+            color: #ffffff;
+        }
         .container {
             display: flex;
         }
@@ -24,19 +51,32 @@
             overflow-y: scroll;
             border: 1px solid #ccc;
             padding: 5px;
+            background-color: #f9f9f9;
+            font-family: Arial, sans-serif;
         }
-        .chat-input {
-            margin-top: 10px;
+        .chat-messages div {
+            margin-bottom: 10px;
+            padding: 5px;
+            border-bottom: 1px solid #ddd;
+        }
+        .chat-messages .player-name {
+            font-weight: bold;
+            color: #333;
+        }
+        .chat-messages .message-text {
+            margin-left: 10px;
+            color: #555;
         }
     </style>
 </head>
-<body>
+<body class="light-mode">
 <h1>Chess Game</h1>
+<button id="toggle-mode">Toggle Dark/Light Mode</button>
 {% if error %}
-<script>
-    window.location.href = '/game/{{ game_code }}';
-    alert("{{ error }}");
-</script>
+    <script>
+        window.location.href = '/game/{{ game_code }}';
+        alert("{{ error }}");
+    </script>
 {% endif %}
 <div class="container">
     <div class="game-area">
@@ -47,7 +87,8 @@
         </div>
     </div>
     <div class="chat-section">
-    {% if color != None %}
+        {% if color != None %}
+
 
         <div class="chat-messages" id="chat-messages">
         </div>
@@ -62,7 +103,7 @@
         <div>
             <p>Chat disabled for other matches</p>
         </div>
-    {% endif %}
+        {% endif %}
     </div>
 </div>
 <script>
@@ -80,9 +121,8 @@
             .then(response => response.json())
             .then(data => {
                 console.log(data);
-                if (data.status === 400) {
-                    alert(data.body);
-                } else {
+                // no elseif cuz it was bugging
+                if (data.status === 200) {
                     //update board
                     document.getElementById('chess-board').innerHTML = data.board;
                     // update select piece text
@@ -110,7 +150,7 @@
     // Reload messages every 10 seconds, didn't want to spam server, but you could modify if you want
     setInterval(reloadMessages, 10000);
     // Reload board every 5 seconds, again, changeable
-    setInterval(updateBoard, 5000, "None");
+    setInterval(updateBoard, 5000, document.getElementById('selected-piece').textContent);
 
     document.getElementById('chat-form').addEventListener('submit', function(event) {
         event.preventDefault();
@@ -164,6 +204,21 @@
         console.log('Clicked square:', square);
         updateBoard(square);
 
+    });
+
+    // Dark/Light mode toggle cuz dark mode > light mode
+    const toggleButton = document.getElementById('toggle-mode');
+    toggleButton.addEventListener('click', function() {
+        const body = document.body;
+        body.classList.toggle('dark-mode');
+        body.classList.toggle('light-mode');
+        localStorage.setItem('mode', body.classList.contains('dark-mode') ? 'dark' : 'light');
+    });
+
+    // Load mode from localStorage (better than cookies)
+    window.addEventListener('load', function() {
+        const mode = localStorage.getItem('mode') || 'light';
+        document.body.classList.add(mode + '-mode');
     });
 </script>
 </body>

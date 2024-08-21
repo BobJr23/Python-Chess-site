@@ -3,23 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <title>Chess Game</title>
+    <style>
+        body.light-mode {
+            background-color: #ffffff;
+            color: #000000;
+        }
+        body.dark-mode {
+            background-color: #000000;
+            color: #ffffff;
+        }
+    </style>
 </head>
-<body>
+<body class="light-mode">
 <h1>Welcome to BobJr's Chess site</h1>
+<button id="toggle-mode">Toggle Dark/Light Mode</button>
+<p>Number of active players: {{ active_players }}</p>
 {% if username %}
-    <p>Welcome, {{ username }}!</p>
-    <a href="/logout">Logout</a>
-    <br><br>
-    <a href="/find-open">Find some Open Games to Join!</a>
-    <br><br>
-    <form action="/join" method="post">
-        <label>
-            Or enter a game code to join:
-            <input type="text" name="game_code">
-        </label>
-
-        <button type="submit">Join Game</button>
-    </form>
+{% else %}
+{% endif %}
+<form action="/signup" method="post">
+    <label>
+        Enter a username to begin playing:
+        <input type="text" name="username">
+    </label>
+    <button type="submit">Save Username</button>
+</form>
+<p>If you signed up already but still have this query, try refreshing. If you still see this that means your username has been taken</p>
+<p>Welcome, {{ username }}!</p>
+<a href="/logout">Logout</a>
+<br><br>
+<a href="/find-open">Find some Open Games to Join!</a>
+<br><br>
+<form action="/join" method="post">
+    <label>
+        Or enter a game code to join:
+        <input type="text" name="game_code">
+    </label>
+    <button type="submit">Join Game</button>
+</form>
 <form action="/new_game" method="post">
     <label>
         <input type="radio" name="game_type" value="public" checked> Public
@@ -29,16 +50,21 @@
     </label>
     <button type="submit">New Game</button>
 </form>
-{% else %}
-<form action="/signup" method="post">
-    <label>
-        Enter a username to begin playing:
-        <input type="text" name="username">
-    </label>
+<script>
+    // Dark/Light mode toggle
+    const toggleButton = document.getElementById('toggle-mode');
+    toggleButton.addEventListener('click', function() {
+        const body = document.body;
+        body.classList.toggle('dark-mode');
+        body.classList.toggle('light-mode');
+        localStorage.setItem('mode', body.classList.contains('dark-mode') ? 'dark' : 'light');
+    });
 
-    <button type="submit">Save Username</button>
-</form>
-    <p>If you signed up already but still have this query, try refreshing. If you still see this that means your username has been taken</p>
-{% endif %}
+    // Load mode from localStorage
+    window.addEventListener('load', function() {
+        const mode = localStorage.getItem('mode') || 'light';
+        document.body.classList.add(mode + '-mode');
+    });
+</script>
 </body>
 </html>
